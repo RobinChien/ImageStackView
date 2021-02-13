@@ -9,6 +9,7 @@ import android.graphics.drawable.VectorDrawable
 import android.os.Build
 import android.util.AttributeSet
 import android.widget.FrameLayout
+import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 
 class ImageStackView(
@@ -19,8 +20,36 @@ class ImageStackView(
 
     // Properties
     private var countImage: Int = 0
+    private var imageViews: MutableList<ImageView> = mutableListOf()
 
     //region Draw Method
+    fun add(imageView: ImageView, position: Int? = null) {
+        imageView.scaleType = ScaleType.FIT_XY
+
+        if (position != null) {
+            imageViews.add(position, imageView)
+        } else {
+            imageViews.add(imageView)
+        }
+
+        updateView()
+    }
+
+    fun remove(imageView: ImageView) {
+        val index = imageViews.indexOf(imageView)
+        if (index < 0) {
+            return
+        } else {
+            imageViews.removeAt(index = index)
+        }
+
+        updateView()
+    }
+
+    private fun updateView() {
+
+    }
+
     private fun drawableToBitmap(drawable: Drawable?): Bitmap? =
         drawable?.let {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && it is VectorDrawable) {
