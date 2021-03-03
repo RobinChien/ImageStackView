@@ -3,20 +3,23 @@ package com.robinchien.imagestackview
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.VectorDrawable
 import android.os.Build
 import android.util.AttributeSet
+import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 
 class ImageStackView(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : AppCompatImageView(context, attrs, defStyleAttr) {
+    val ctx: Context,
+    val attrs: AttributeSet? = null,
+    val defStyleAttr: Int = 0
+) : AppCompatImageView(ctx, attrs, defStyleAttr) {
 
     // Properties
     private var countImage: Int = 0
@@ -47,7 +50,42 @@ class ImageStackView(
     }
 
     private fun updateView() {
+        if (imageViews.isNullOrEmpty()) {
+            return
+        }
 
+
+    }
+
+    private fun addBlackOverlay(imageView: ImageView, text: String) {
+        if (text.isEmpty()) {
+            return
+        }
+
+        val layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            this.gravity = Gravity.CENTER
+        }
+
+        val frameLayout: FrameLayout = FrameLayout(ctx).apply {
+            this.layoutParams = layoutParams
+        }
+
+        val textView: TextView = TextView(ctx).apply {
+            this.layoutParams = layoutParams
+            this.text = text
+            this.gravity = Gravity.CENTER
+        }
+
+        imageView.apply {
+            this.setColorFilter(Color.parseColor("#26000000"))
+            this.scaleType = ImageView.ScaleType.FIT_XY
+        }
+
+        frameLayout.addView(textView)
+        frameLayout.addView(imageView)
     }
 
     private fun drawableToBitmap(drawable: Drawable?): Bitmap? =
