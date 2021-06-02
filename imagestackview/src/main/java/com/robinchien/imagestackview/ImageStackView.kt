@@ -1,17 +1,13 @@
 package com.robinchien.imagestackview
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.VectorDrawable
-import android.os.Build
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 
@@ -22,6 +18,8 @@ class ImageStackView(
 ) : AppCompatImageView(ctx, attrs, defStyleAttr) {
 
     // Properties
+    private val MAX_NUM_VIEWS: Int = 5
+    private val NUM_VIEWS_IN_FIRST_STACK = 1
     private var countImage: Int = 0
     private var imageViews: MutableList<ImageView> = mutableListOf()
 
@@ -35,7 +33,7 @@ class ImageStackView(
             imageViews.add(imageView)
         }
 
-        updateView()
+        updateViews()
     }
 
     fun remove(imageView: ImageView) {
@@ -46,15 +44,79 @@ class ImageStackView(
             imageViews.removeAt(index = index)
         }
 
-        updateView()
+        updateViews()
     }
 
-    private fun updateView() {
+    private fun updateViews() {
         if (imageViews.isNullOrEmpty()) {
             return
         }
 
+        var groupViews: MutableList<MutableList<ImageView>> = mutableListOf()
 
+        if (imageViews.size < MAX_NUM_VIEWS) {
+            groupViews =
+                if (imageViews.size <= NUM_VIEWS_IN_FIRST_STACK) {
+                    mutableListOf(imageViews)
+                } else {
+                    mutableListOf(
+                        imageViews.subList(0, NUM_VIEWS_IN_FIRST_STACK),
+                        imageViews.subList(NUM_VIEWS_IN_FIRST_STACK, imageViews.size)
+                    )
+                }
+
+        } else {
+            val diffNumViews = imageViews.size - MAX_NUM_VIEWS
+
+            if (diffNumViews > 0) {
+                addBlackOverlay(imageView = imageViews.get(diffNumViews - 1), "+ $diffNumViews")
+            }
+
+            val numViewsInGroup: Int = MAX_NUM_VIEWS.plus(1).div(2)
+            groupViews = mutableListOf(
+                imageViews.subList(0, numViewsInGroup),
+                imageViews.subList(numViewsInGroup, MAX_NUM_VIEWS)
+            )
+        }
+
+        val subStackViewOrientation: Int =
+            if (imageViews.size < MAX_NUM_VIEWS) {
+                LinearLayout.VERTICAL
+            } else {
+                LinearLayout.HORIZONTAL
+            }
+
+        groupViews
+            .map { groupView ->
+                newStackView(
+                    groupView = groupView,
+                    orientation = subStackViewOrientation
+                )
+            }
+            .run {
+                newStackView(
+                    groupView = this,
+                    orientation = if (subStackViewOrientation == LinearLayout.HORIZONTAL) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+                )
+            }
+            .apply {
+                // TODO: 6/2/21 Add to parent view
+            }
+    }
+
+    private fun newStackView(groupView: List<View>, orientation: Int): LinearLayout {
+        val linearLayout = LinearLayout(ctx).apply {
+            this.orientation = orientation
+            this.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+        groupView.forEach { view ->
+            linearLayout.addView(view)
+        }
+
+        return linearLayout
     }
 
     private fun addBlackOverlay(imageView: ImageView, text: String) {
@@ -87,58 +149,5 @@ class ImageStackView(
         frameLayout.addView(textView)
         frameLayout.addView(imageView)
     }
-
-    private fun drawableToBitmap(drawable: Drawable?): Bitmap? =
-        drawable?.let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && it is VectorDrawable) {
-                it.vectorDrawableToBitmap()
-            } else {
-                when (it) {
-                    is BitmapDrawable -> it.bitmapDrawableToBitmap()
-                    else -> it.toBitmap()
-                }
-            }
-        }
-
-    private fun VectorDrawable.vectorDrawableToBitmap(): Bitmap {
-        // Generate max bitmap size from view when is vector drawable
-        // no when scale type is CENTER_INSIDE
-        val bitmap = Bitmap.createBitmap(
-            if (scaleType == ScaleType.CENTER_INSIDE) this.intrinsicWidth else width,
-            if (scaleType == ScaleType.CENTER_INSIDE) this.intrinsicHeight else height,
-            Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        this.setBounds(0, 0, canvas.width, canvas.height)
-        this.draw(canvas)
-        return bitmap
-    }
-
-    private fun BitmapDrawable.bitmapDrawableToBitmap(): Bitmap =
-        bitmap.let {
-            Bitmap.createScaledBitmap(
-                it,
-                this.intrinsicWidth,
-                this.intrinsicHeight,
-                false
-            )
-        }
-
-    private fun Drawable.toBitmap(): Bitmap? =
-        try {
-            // Create Bitmap object out of the drawable
-            val bitmap = Bitmap.createBitmap(
-                this.intrinsicWidth,
-                this.intrinsicHeight,
-                Bitmap.Config.ARGB_8888
-            )
-            val canvas = Canvas(bitmap)
-            this.setBounds(0, 0, canvas.width, canvas.height)
-            this.draw(canvas)
-            bitmap
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
     // endregion
 }
