@@ -2,6 +2,7 @@ package com.robinchien.imagestackview
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
@@ -9,50 +10,54 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.widget.AppCompatImageView
 
-class ImageStackView(
+class ImageStackView @JvmOverloads constructor(
     val ctx: Context,
     val attrs: AttributeSet? = null,
     val defStyleAttr: Int = 0
-) : AppCompatImageView(ctx, attrs, defStyleAttr) {
+) : LinearLayout(ctx, attrs, defStyleAttr) {
 
     // Properties
     private val MAX_NUM_VIEWS: Int = 5
     private val NUM_VIEWS_IN_FIRST_STACK = 1
-    private var countImage: Int = 0
-    private var imageViews: MutableList<ImageView> = mutableListOf()
+    private var images: MutableList<Drawable> = mutableListOf()
 
     //region Draw Method
-    fun add(imageView: ImageView, position: Int? = null) {
-        imageView.scaleType = ScaleType.FIT_XY
-
-        if (position != null) {
-            imageViews.add(position, imageView)
+    fun addImage(image: Drawable, index: Int? = null) {
+        if (index != null) {
+            images.add(index, image)
         } else {
-            imageViews.add(imageView)
+            images.add(image)
         }
 
         updateViews()
     }
 
-    fun remove(imageView: ImageView) {
-        val index = imageViews.indexOf(imageView)
+    fun addImages(images: List<Drawable>) {
+        this.images.addAll(images)
+        updateViews()
+    }
+
+    fun removeImage(imageView: ImageView) {
+        val index = images.indexOf(imageView)
         if (index < 0) {
             return
         } else {
-            imageViews.removeAt(index = index)
+            images.removeAt(index = index)
         }
 
         updateViews()
     }
 
     private fun updateViews() {
-        if (imageViews.isNullOrEmpty()) {
+        removeAllViewsInLayout()
+
+        if (images.isNullOrEmpty()) {
             return
         }
 
-        var groupViews: MutableList<MutableList<ImageView>> = mutableListOf()
+        val imageViews = images.map { it.toImageView() }
+        var groupViews: MutableList<List<ImageView>>
 
         if (imageViews.size < MAX_NUM_VIEWS) {
             groupViews =
@@ -61,15 +66,15 @@ class ImageStackView(
                 } else {
                     mutableListOf(
                         imageViews.subList(0, NUM_VIEWS_IN_FIRST_STACK),
-                        imageViews.subList(NUM_VIEWS_IN_FIRST_STACK, imageViews.size)
+                        imageViews.subList(NUM_VIEWS_IN_FIRST_STACK, images.size)
                     )
                 }
 
         } else {
-            val diffNumViews = imageViews.size - MAX_NUM_VIEWS
+            val diffNumViews = images.size - MAX_NUM_VIEWS
 
             if (diffNumViews > 0) {
-                addBlackOverlay(imageView = imageViews.get(diffNumViews - 1), "+ $diffNumViews")
+                addBlackOverlay(image = images.get(diffNumViews - 1), "+ $diffNumViews")
             }
 
             val numViewsInGroup: Int = MAX_NUM_VIEWS.plus(1).div(2)
@@ -80,10 +85,10 @@ class ImageStackView(
         }
 
         val subStackViewOrientation: Int =
-            if (imageViews.size < MAX_NUM_VIEWS) {
-                LinearLayout.VERTICAL
+            if (images.size < MAX_NUM_VIEWS) {
+                VERTICAL
             } else {
-                LinearLayout.HORIZONTAL
+                HORIZONTAL
             }
 
         groupViews
@@ -96,20 +101,24 @@ class ImageStackView(
             .run {
                 newStackView(
                     groupView = this,
-                    orientation = if (subStackViewOrientation == LinearLayout.HORIZONTAL) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+                    orientation = if (subStackViewOrientation == HORIZONTAL) VERTICAL else HORIZONTAL
                 )
             }
             .apply {
-                // TODO: 6/2/21 Add to parent view
+                addViewInLayout(
+                    this,
+                    -1,
+                    LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+                )
             }
     }
 
     private fun newStackView(groupView: List<View>, orientation: Int): LinearLayout {
         val linearLayout = LinearLayout(ctx).apply {
             this.orientation = orientation
-            this.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
+            this.layoutParams = LayoutParams(
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT
             )
         }
         groupView.forEach { view ->
@@ -119,7 +128,7 @@ class ImageStackView(
         return linearLayout
     }
 
-    private fun addBlackOverlay(imageView: ImageView, text: String) {
+    private fun addBlackOverlay(image: Drawable, text: String) {
         if (text.isEmpty()) {
             return
         }
@@ -141,13 +150,21 @@ class ImageStackView(
             this.gravity = Gravity.CENTER
         }
 
-        imageView.apply {
+        val imageView: ImageView = ImageView(ctx).apply {
             this.setColorFilter(Color.parseColor("#26000000"))
-            this.scaleType = ImageView.ScaleType.FIT_XY
+            this.scaleType = ImageView.ScaleType.CENTER_CROP
+            this.setImageDrawable(image)
         }
 
         frameLayout.addView(textView)
         frameLayout.addView(imageView)
     }
     // endregion
+
+    private fun Drawable.toImageView(): ImageView {
+        return ImageView(ctx).apply {
+            this.scaleType = ImageView.ScaleType.CENTER_CROP
+            this.setImageDrawable(this@toImageView)
+        }
+    }
 }
