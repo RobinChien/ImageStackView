@@ -6,9 +6,10 @@ import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
-import android.widget.FrameLayout
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
 import android.widget.TextView
 
 class ImageStackView @JvmOverloads constructor(
@@ -57,7 +58,7 @@ class ImageStackView @JvmOverloads constructor(
         }
 
         val imageViews = images.map { it.toImageView() }
-        var groupViews: MutableList<List<ImageView>>
+        var groupViews: MutableList<List<ImageView>> = mutableListOf()
 
         if (imageViews.size < MAX_NUM_VIEWS) {
             groupViews =
@@ -117,8 +118,9 @@ class ImageStackView @JvmOverloads constructor(
         val linearLayout = LinearLayout(ctx).apply {
             this.orientation = orientation
             this.layoutParams = LayoutParams(
-                LayoutParams.WRAP_CONTENT,
-                LayoutParams.WRAP_CONTENT
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+                1f
             )
         }
         groupView.forEach { view ->
@@ -133,38 +135,49 @@ class ImageStackView @JvmOverloads constructor(
             return
         }
 
-        val layoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
+        val layoutParams = RelativeLayout.LayoutParams(
+            RelativeLayout.LayoutParams.WRAP_CONTENT,
+            RelativeLayout.LayoutParams.WRAP_CONTENT
         ).apply {
-            this.gravity = Gravity.CENTER
+            this.alignWithParent = true
         }
 
-        val frameLayout: FrameLayout = FrameLayout(ctx).apply {
+        val relativeLayout: RelativeLayout = RelativeLayout(ctx).apply {
             this.layoutParams = layoutParams
         }
 
         val textView: TextView = TextView(ctx).apply {
             this.layoutParams = layoutParams
             this.text = text
+            this.setTextColor(Color.parseColor("#FFFFFF"))
+            this.textSize = spToPx(14)
             this.gravity = Gravity.CENTER
         }
 
         val imageView: ImageView = ImageView(ctx).apply {
-            this.setColorFilter(Color.parseColor("#26000000"))
+            this.setColorFilter(Color.parseColor("#66000000"))
             this.scaleType = ImageView.ScaleType.CENTER_CROP
             this.setImageDrawable(image)
         }
 
-        frameLayout.addView(textView)
-        frameLayout.addView(imageView)
+        relativeLayout.addView(imageView)
+        relativeLayout.addView(textView)
     }
     // endregion
 
     private fun Drawable.toImageView(): ImageView {
         return ImageView(ctx).apply {
+            this.layoutParams = LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+                1f
+            )
             this.scaleType = ImageView.ScaleType.CENTER_CROP
             this.setImageDrawable(this@toImageView)
         }
+    }
+
+    private fun spToPx(sp: Int): Float {
+        return sp * resources.displayMetrics.scaledDensity
     }
 }
